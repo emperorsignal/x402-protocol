@@ -11,6 +11,15 @@ The X402 Protocol is a proprietary API standard built on the HTTP 402 "Payment R
 - ⏱️ **Sub-second Latency**: Real-time signal delivery via high-performance WebSockets
 - 💰 **Micropayment Model**: No monthly subscriptions required—pay only for the signals you consume
 - 🔗 **Multi-Chain Support**: Native support for Solana (SPL) and EVM-compatible networks
+- 🤖 **Accountless Pay-As-You-Go**: Bots can pay on-chain per request—no account needed!
+
+## 🔒 Security Features
+
+- **Replay Protection**: Each transaction signature can only be used once
+- **Time-Limited Payments**: Transactions must be within 10 minutes of block time
+- **On-Chain Verification**: Real-time Solana RPC validation of USDC transfers
+- **Atomic Transactions**: Credit deductions use Firestore transactions to prevent race conditions
+- **Dynamic Pricing**: Prices sync instantly from admin configuration
 
 ## 🚀 Capabilities
 
