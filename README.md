@@ -34,16 +34,167 @@ Retrieve high-fidelity market data across 100+ top assets:
 
 ## 🛠️ Getting Started
 
+X402 Protocol supports **two modes**:
+
+### Mode 1: Account-Based Credits (Recommended for high-volume)
+1. Create account at [Emperor Signal](https://emperorsignal.com)
+2. Top up credits via Stripe or crypto
+3. Use API key or Bearer token for requests
+
+### Mode 2: Pay-As-You-Go (Accountless/Trustless)
+1. Make a request → Get 402 with payment info
+2. Pay on-chain (USDC to treasury wallet)
+3. Retry with `X-Payment-Signature` header → Get signal
+
+**No account needed for pay-as-you-go!**
+
+---
+
+## 🚀 Pay-As-You-Go Flow (Accountless)
+
+The true X402 protocol - trustless, on-chain micropayments:
+
+```
+┌─────────────┐        ┌─────────────┐        ┌─────────────┐
+│   Bot/AI    │───────▶│   Server    │◀──────▶│  Blockchain │
+└─────────────┘        └─────────────┘        └─────────────┘
+      │                      │                      │
+      │  1. POST /signal     │                      │
+      │─────────────────────▶│                      │
+      │                      │                      │
+      │  2. 402 + wallet     │                      │
+      │◀─────────────────────│                      │
+      │                      │                      │
+      │  3. Pay USDC         │                      │
+      │──────────────────────────────────────────▶ │
+      │                      │                      │
+      │  4. POST + tx sig    │                      │
+      │─────────────────────▶│  5. Verify on-chain │
+      │                      │─────────────────────▶│
+      │                      │◀─────────────────────│
+      │  6. Signal data      │                      │
+      │◀─────────────────────│                      │
+```
+
+### Python Example (Pay-As-You-Go)
+
+```python
+import requests
+from solana.rpc.api import Client
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
+from spl.token.instructions import transfer_checked, TransferCheckedParams
+
+BASE_URL = "https://us-central1-emperiorsignal.cloudfunctions.net"
+TREASURY = "AAMLmYgPCSNQHB8mLPjkKpdHkqNu8pJxS58HSe9vKwFA"
+USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+
+def get_signal_pay_as_you_go(symbol="BTCUSDT"):
+    # Step 1: Make request (no auth needed)
+    response = requests.post(
+        f"{BASE_URL}/x402TrendSignal",
+        json={"symbol": symbol}
+    )
+    
+    if response.status_code != 402:
+        return response.json()  # Already have credits or other error
+    
+    # Step 2: Get payment info from 402 response
+    payment_info = response.json().get("paymentInfo", {})
+    amount_usdc = payment_info.get("amount", 0.01)
+    wallet = payment_info.get("wallet")
+    
+    print(f"Payment required: ${amount_usdc} USDC to {wallet}")
+    
+    # Step 3: Pay on-chain (you need a funded wallet)
+    tx_signature = pay_usdc(amount_usdc, wallet)  # Your payment function
+    
+    # Step 4: Retry with payment signature
+    response = requests.post(
+        f"{BASE_URL}/x402TrendSignal",
+        json={"symbol": symbol},
+        headers={"X-Payment-Signature": tx_signature}
+    )
+    
+    return response.json()
+
+# Example output
+signal = get_signal_pay_as_you_go("BTCUSDT")
+print(f"Signal: {signal['data']['signal']}")
+print(f"Confidence: {signal['data']['confidence']}%")
+```
+
+### Node.js Example (Pay-As-You-Go)
+
+```javascript
+const axios = require('axios');
+const { Connection, PublicKey, Transaction } = require('@solana/web3.js');
+const { getOrCreateAssociatedTokenAccount, createTransferInstruction } = require('@solana/spl-token');
+
+const BASE_URL = 'https://us-central1-emperiorsignal.cloudfunctions.net';
+const TREASURY = 'AAMLmYgPCSNQHB8mLPjkKpdHkqNu8pJxS58HSe9vKwFA';
+
+async function getSignalPayAsYouGo(symbol, wallet) {
+    // Step 1: Try request (no auth)
+    try {
+        const response = await axios.post(`${BASE_URL}/x402TrendSignal`, { symbol });
+        return response.data;
+    } catch (error) {
+        if (error.response?.status !== 402) throw error;
+        
+        // Step 2: Get payment info
+        const paymentInfo = error.response.data.paymentInfo;
+        console.log(`Payment required: $${paymentInfo.amount} USDC`);
+        
+        // Step 3: Pay on-chain
+        const txSignature = await payUSDC(wallet, paymentInfo.amount, TREASURY);
+        
+        // Step 4: Retry with signature
+        const retryResponse = await axios.post(
+            `${BASE_URL}/x402TrendSignal`,
+            { symbol },
+            { headers: { 'X-Payment-Signature': txSignature } }
+        );
+        
+        return retryResponse.data;
+    }
+}
+```
+
+---
+
+## 💳 Account-Based Credits
+
+For high-volume users, you can pre-purchase credits:
+
 ### 1. Create an Account
 Sign up at [Emperor Signal](https://emperorsignal.com) and navigate to the X402 Protocol page.
 
 ### 2. Generate API Keys
 Navigate to your [X402 Dashboard](https://emperorsignal.com/x402) and click "Create Key" to generate a new API key.
 
-### 3. Fund Your Protocol Wallet
-X402 operates on a credit-based system. Add credits via:
-- **Stripe**: Pay with credit/debit card
-- **Crypto**: Deposit USDC or IMPERIUM tokens on Solana
+### 3. Top Up Credits
+- **Stripe**: Pay with credit/debit card (minimum $5)
+- **Crypto**: Send USDC to treasury wallet (minimum $5)
+
+### 4. Use Your Credits
+
+```python
+# With API Key
+response = requests.post(
+    f"{BASE_URL}/x402TrendSignal",
+    json={"symbol": "BTCUSDT", "apiKey": "x402_your_api_key_here"}
+)
+
+# With Bearer Token (Firebase Auth)
+response = requests.post(
+    f"{BASE_URL}/x402TrendSignal",
+    json={"symbol": "BTCUSDT"},
+    headers={"Authorization": f"Bearer {firebase_id_token}"}
+)
+```
+
+---
 
 ## 📡 API Reference
 
@@ -52,23 +203,20 @@ X402 operates on a credit-based system. Add credits via:
 https://us-central1-emperiorsignal.cloudfunctions.net
 ```
 
-### Authentication
-All requests require a valid Firebase Auth token:
-```
-Authorization: Bearer <your_firebase_id_token>
-```
+### Authentication Options
 
-Or use an API key:
-```
-X-API-Key: <your_api_key>
-```
+| Method | Header | Use Case |
+|--------|--------|----------|
+| Pay-As-You-Go | `X-Payment-Signature: <tx_sig>` | Accountless, per-request |
+| API Key | `X-API-Key: <key>` | External apps, bots |
+| Bearer Token | `Authorization: Bearer <token>` | Web apps with Firebase Auth |
 
 ### Endpoints
 
 | Endpoint | Method | Cost | Description |
 |----------|--------|------|-------------|
-| `/x402TrendSignal` | POST | 1 credit | Get trend signal for a symbol |
-| `/x402MegaSignal` | POST | 2 credits | Get mega signal (multi-timeframe) |
+| `/x402TrendSignal` | POST | 1 credit ($0.01) | Get trend signal for a symbol |
+| `/x402MegaSignal` | POST | 2 credits ($0.02) | Get mega signal (multi-timeframe) |
 | `/x402Gate` | POST | varies | Check/deduct credits for custom services |
 
 ### Pricing
