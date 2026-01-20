@@ -98,7 +98,13 @@ BASE_URL = "https://us-central1-emperiorsignal.cloudfunctions.net"
 TREASURY = "AAMLmYgPCSNQHB8mLPjkKpdHkqNu8pJxS58HSe9vKwFA"
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 
-def get_signal_pay_as_you_go(symbol="BTCUSDT"):
+def get_signal_pay_as_you_go(symbol="BTC"):
+    """
+    Get trend signal using pay-as-you-go (no account needed).
+    
+    IMPORTANT: Use symbol without 'USDT' suffix!
+    Examples: 'BTC', 'ETH', 'SOL', 'PEPE' (NOT 'BTCUSDT')
+    """
     # Step 1: Make request (no auth needed)
     response = requests.post(
         f"{BASE_URL}/x402TrendSignal",
@@ -128,9 +134,9 @@ def get_signal_pay_as_you_go(symbol="BTCUSDT"):
     return response.json()
 
 # Example output
-signal = get_signal_pay_as_you_go("BTCUSDT")
-print(f"Signal: {signal['data']['signal']}")
-print(f"Confidence: {signal['data']['confidence']}%")
+signal = get_signal_pay_as_you_go("BTC")  # Use 'BTC' not 'BTCUSDT'!
+print(f"Signal: {signal['signal']}")
+print(f"Confidence: {signal['confidence']}%")
 ```
 
 ### Node.js Example (Pay-As-You-Go)
@@ -189,16 +195,16 @@ Navigate to your [X402 Dashboard](https://emperorsignal.com/x402) and click "Cre
 ### 4. Use Your Credits
 
 ```python
-# With API Key
+# With API Key (use symbol WITHOUT 'USDT' suffix!)
 response = requests.post(
     f"{BASE_URL}/x402TrendSignal",
-    json={"symbol": "BTCUSDT", "apiKey": "x402_your_api_key_here"}
+    json={"symbol": "BTC", "apiKey": "x402_your_api_key_here"}
 )
 
 # With Bearer Token (Firebase Auth)
 response = requests.post(
     f"{BASE_URL}/x402TrendSignal",
-    json={"symbol": "BTCUSDT"},
+    json={"symbol": "SOL"},  # NOT 'SOLUSDT'!
     headers={"Authorization": f"Bearer {firebase_id_token}"}
 )
 ```
@@ -228,6 +234,62 @@ https://us-central1-emperiorsignal.cloudfunctions.net
 | `/x402MegaSignal` | POST | 2 credits ($0.02) | Get mega signal (multi-timeframe) |
 | `/x402Gate` | POST | varies | Check/deduct credits for custom services |
 
+### ⚠️ Symbol Format
+
+**IMPORTANT**: Use symbols WITHOUT the 'USDT' suffix!
+
+```json
+// ✅ CORRECT
+{"symbol": "BTC"}
+{"symbol": "ETH"}
+{"symbol": "SOL"}
+
+// ❌ WRONG
+{"symbol": "BTCUSDT"}
+{"symbol": "ETHUSDT"}
+```
+
+### 📊 Supported Symbols (124 total)
+
+**Major Coins:**
+```
+BTC ETH BNB SOL XRP DOGE ADA AVAX DOT LINK
+LTC BCH ETC XLM XMR ATOM NEAR UNI AAVE MKR
+```
+
+**DeFi & Layer 2:**
+```
+ARB OP MATIC IMX STX SUI APT SEI TIA INJ
+JUP JTO ONDO PENDLE LDO DYDX GMX CRV SNX COMP
+```
+
+**Meme & Trending:**
+```
+PEPE SHIB DOGE WIF BONK FLOKI MEME TURBO NEIRO BOME
+```
+
+**AI & Gaming:**
+```
+FET AGIX RNDR TAO OCEAN AXS SAND MANA GALA ENJ
+```
+
+**Full List:**
+```
+1INCH AAVE ADA AGIX ALGO ANKR APE APT AR ARB
+ATOM AVAX AXS BAND BAT BCH BLUR BNB BOME BONK
+BTC CAKE CELO CELR CFX CHZ CKB COMP CRV CTSI
+CVX DASH DOGE DOGS DOT DYDX EGLD ENA ENJ ENS
+EOS ETC ETH FET FIL FLOKI FLOW FTM GALA GMX
+GRT HBAR HOT ICP IMX INJ IOTA IOTX JTO JUP
+KAVA KLAY KSM LDO LINK LRC LTC MANA MASK MATIC
+MEME MINA MKR NEAR NEIRO NEO NOT OCEAN OGN ONDO
+ONE ONT OP ORDI PENDLE PEOPLE PEPE PYTH QNT RNDR
+ROSE RUNE SAND SC SEI SHIB SKL SNX SOL STORJ
+STRK STX SUI SUSHI TAO THETA TIA TON TRX TURBO
+UNI VET WAVES WIF WLD XLM XMR XRP XTZ YFI
+ZEC ZEN ZIL ZRX
+```
+
 ### Pricing
 
 | Service | Credits | USD Value |
@@ -253,8 +315,13 @@ firebase_admin.initialize_app(cred)
 
 BASE_URL = "https://us-central1-emperiorsignal.cloudfunctions.net"
 
-def get_trend_signal(symbol="BTCUSDT", id_token=None):
-    """Fetch trend signal for a given symbol"""
+def get_trend_signal(symbol="BTC", id_token=None):
+    """
+    Fetch trend signal for a given symbol.
+    
+    IMPORTANT: Use symbol without 'USDT' suffix!
+    Examples: 'BTC', 'ETH', 'SOL', 'PEPE'
+    """
     headers = {
         "Authorization": f"Bearer {id_token}",
         "Content-Type": "application/json"
@@ -274,11 +341,11 @@ def get_trend_signal(symbol="BTCUSDT", id_token=None):
     
     return response.json()
 
-# Example usage
-signal = get_trend_signal("BTCUSDT", id_token="your_firebase_id_token")
+# Example usage - use 'BTC' not 'BTCUSDT'!
+signal = get_trend_signal("BTC", id_token="your_firebase_id_token")
 if signal and signal.get("success"):
-    print(f"Signal: {signal['data']['signal']}")
-    print(f"Confidence: {signal['data']['confidence']}%")
+    print(f"Signal: {signal['signal']}")
+    print(f"Confidence: {signal['confidence']}%")
 ```
 
 ### Node.js Example
@@ -288,6 +355,11 @@ const axios = require('axios');
 
 const BASE_URL = 'https://us-central1-emperiorsignal.cloudfunctions.net';
 
+/**
+ * Get mega signal for a symbol.
+ * IMPORTANT: Use symbol without 'USDT' suffix!
+ * Examples: 'BTC', 'ETH', 'SOL', 'PEPE'
+ */
 async function getMegaSignal(symbol, idToken) {
     try {
         const response = await axios.post(
@@ -301,8 +373,9 @@ async function getMegaSignal(symbol, idToken) {
             }
         );
         
-        console.log('Signal:', response.data.data.signal);
-        console.log('Confidence:', response.data.data.confidence);
+        console.log('Signal:', response.data.direction);
+        console.log('Confidence:', response.data.confidence);
+        console.log('Is Mega:', response.data.isMegaSignal);
         return response.data;
         
     } catch (error) {
@@ -318,29 +391,35 @@ async function getMegaSignal(symbol, idToken) {
     }
 }
 
-// Example usage
-getMegaSignal('ETHUSDT', 'your_firebase_id_token');
+// Example usage - use 'ETH' not 'ETHUSDT'!
+getMegaSignal('ETH', 'your_firebase_id_token');
 ```
 
 ### cURL Example
 
 ```bash
-# Get Trend Signal
+# Get Trend Signal (use symbol without USDT suffix!)
 curl -X POST https://us-central1-emperiorsignal.cloudfunctions.net/x402TrendSignal \
-  -H "Authorization: Bearer YOUR_FIREBASE_ID_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"symbol": "BTCUSDT"}'
+  -H "X-Payment-Signature: YOUR_TX_SIGNATURE" \
+  -d '{"symbol": "BTC"}'
 
 # Response (success)
 {
   "success": true,
-  "data": {
-    "symbol": "BTCUSDT",
-    "signal": "BUY",
-    "confidence": 85,
-    "timestamp": "2026-01-20T10:30:00Z"
+  "symbol": "BTC",
+  "signal": "SELL",
+  "strength": 0.65,
+  "confidence": 65.1,
+  "atr": {
+    "percent": 0.75,
+    "value": 696.68
   },
-  "remainingCredits": 99
+  "x402": {
+    "payAsYouGo": true,
+    "txSignature": "3UX7tcv...gWtX",
+    "amountPaid": 0.01
+  }
 }
 
 # Response (insufficient credits - HTTP 402)
