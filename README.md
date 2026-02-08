@@ -10,7 +10,7 @@ The X402 Protocol is a proprietary API standard built on the HTTP 402 "Payment R
 - 🧠 **AI Consensus Engine**: Verified signals from 5 specialized AI models (DeepSeek, Claude, Gemini, Grok, GPT-4o)
 - ⏱️ **Sub-second Latency**: Real-time signal delivery via high-performance WebSockets
 - 💰 **Micropayment Model**: No monthly subscriptions required—pay only for the signals you consume
-- 🔗 **Multi-Chain Support**: Native support for Solana (SPL) and EVM-compatible networks
+- 🔗 **Payments Network**: Pay-As-You-Go uses Solana USDC (SPL). EVM payments are not enabled yet.
 - 🤖 **Accountless Pay-As-You-Go**: Bots can pay on-chain per request—no account needed!
 
 ## 🔒 Security Features
@@ -56,6 +56,51 @@ X402 Protocol supports **two modes**:
 3. Retry with `X-Payment-Signature` header → Get signal
 
 **No account needed for pay-as-you-go!**
+
+---
+
+## 🤖 Agent Integration (Server-Side Payer)
+This pattern is designed for AI agents (including OpenClaw and Moltbots) and backend services.
+
+### Recommended Flow
+1. Call `/x402TrendSignal` with no auth
+2. Receive `402 Payment Required` with `paymentInfo`
+3. Pay USDC on Solana using a **server-side wallet**
+4. Retry with `X-Payment-Signature` header
+
+### Security Checklist
+- Keep private keys **server-side only**
+- Encrypt keys at rest (KMS or vault)
+- **Never store PINs** in Firestore or client storage
+- Rate-limit payment attempts per user/session
+- Log tx signatures for audit + replay protection
+
+### Minimal Example (Server-Side Payer)
+```javascript
+// 1) Attempt request (no auth)
+const first = await fetch("https://us-central1-emperiorsignal.cloudfunctions.net/x402TrendSignal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ symbol: "BTC" })
+});
+
+if (first.status === 402) {
+    const { paymentInfo } = await first.json();
+    const txSig = await payUSDC(paymentInfo.wallet, paymentInfo.amount);
+
+    const paid = await fetch("https://us-central1-emperiorsignal.cloudfunctions.net/x402TrendSignal", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Payment-Signature": txSig
+        },
+        body: JSON.stringify({ symbol: "BTC" })
+    });
+
+    const signal = await paid.json();
+    console.log(signal);
+}
+```
 
 ---
 
@@ -220,11 +265,11 @@ https://us-central1-emperiorsignal.cloudfunctions.net
 
 ### Authentication Options
 
-| Method | Header | Use Case |
-|--------|--------|----------|
-| Pay-As-You-Go | `X-Payment-Signature: <tx_sig>` | Accountless, per-request |
-| API Key | `X-API-Key: <key>` | External apps, bots |
-| Bearer Token | `Authorization: Bearer <token>` | Web apps with Firebase Auth |
+| Method | Where | Use Case |
+|--------|-------|----------|
+| Pay-As-You-Go | Header: `X-Payment-Signature: <tx_sig>` | Accountless, per-request |
+| API Key | JSON body: `apiKey` | External apps, bots |
+| Bearer Token | Header: `Authorization: Bearer <token>` | Web apps with Firebase Auth |
 
 ### Endpoints
 
@@ -233,6 +278,9 @@ https://us-central1-emperiorsignal.cloudfunctions.net
 | `/x402TrendSignal` | POST | 1 credit ($0.01) | Get trend signal for a symbol |
 | `/x402MegaSignal` | POST | 2 credits ($0.02) | Get mega signal (multi-timeframe) |
 | `/x402Gate` | POST | varies | Check/deduct credits for custom services |
+| `/x402GetPricing` | GET | free | Get current pricing and service availability |
+| `/x402GetCredits` | GET | free | Get credit balance (auth required) |
+| `/x402VerifyPayment` | POST | free | Verify top-up and add credits |
 
 ### ⚠️ Symbol Format
 
